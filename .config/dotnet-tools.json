@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "lambdatools": {
+      "version": "1.0.0",
+      "commands": [
+        "new-lambda"
+      ],
+      "rollForward": false
+    }
+  }
+}
