@@ -46,12 +46,12 @@ dotnet new-lambda --name MySimpleBatch --type simple
 ```markdown
 functions/
 └── MySimpleBatch/
-├── src/
-│   ├── Function.cs
-│   └── MySimpleBatch.Lambda.csproj
-└── test/
-    ├── FunctionTest.cs
-    └── MySimpleBatch.Lambda.Tests.csproj
+    ├── src/
+    │   ├── Function.cs
+    │   └── MySimpleBatch.Lambda.csproj
+    └── test/
+        ├── FunctionTest.cs
+        └── MySimpleBatch.Lambda.Tests.csproj
 ```
 
 ### 例2：DDD構成のLambdaの作成
