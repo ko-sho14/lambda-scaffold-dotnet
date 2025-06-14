@@ -23,21 +23,14 @@ typeOption.AddValidator(result =>
 var rootCommand = new RootCommand("A tool to create and configure a new Lambda project.");
 rootCommand.AddOption(nameOption);
 rootCommand.AddOption(typeOption);
-
 rootCommand.SetHandler((name, type) =>
 {
     Console.WriteLine($"🚀 Starting creation of '{name}' with '{type}' template...");
+    var generator = new ProjectGenerator(name);
     try
     {
-        var generator = new ProjectGenerator(name);
-        if (type == "simple")
-        {
-            generator.CreateSimple();
-        }
-        else if (type == "ddd")
-        {
-            generator.CreateDdd();
-        }
+        if (type == "simple") { generator.CreateSimple(); }
+        else if (type == "ddd") { generator.CreateDdd(); }
         Console.WriteLine($"✅ Successfully created Lambda project '{name}'.");
     }
     catch (Exception ex)
@@ -47,7 +40,6 @@ rootCommand.SetHandler((name, type) =>
         Console.ResetColor();
     }
 }, nameOption, typeOption);
-
 return await rootCommand.InvokeAsync(args);
 
 
@@ -65,100 +57,91 @@ public class ProjectGenerator
     {
         _name = name;
         _repoRoot = GetRepositoryRoot();
-
-        // --- ▼ ソリューションファイルを自動検出するロジック ▼ ---
         var slnFiles = Directory.GetFiles(_repoRoot, "*.sln");
-        if (slnFiles.Length == 0)
-        {
-            throw new FileNotFoundException("No .sln file found in the repository root. Please create a solution file first.");
-        }
-        if (slnFiles.Length > 1)
-        {
-            throw new InvalidOperationException("Multiple .sln files found in the repository root. The tool cannot determine which one to use.");
-        }
-        _slnPath = slnFiles[0]; // 見つかった唯一の .sln ファイルを使用
+        if (slnFiles.Length == 0) throw new FileNotFoundException("No .sln file found in the repository root.");
+        if (slnFiles.Length > 1) throw new InvalidOperationException("Multiple .sln files found in the repository root.");
+        _slnPath = slnFiles[0];
         Console.WriteLine($"-> Targeting solution file: {Path.GetFileName(_slnPath)}");
-        // --- ▲ ここまでが修正箇所 ▲ ---
-
-        _functionRoot = Path.Combine(_repoRoot, "functions", _name);
+        _functionRoot = Path.Combine(_repoRoot, "functions", name);
     }
 
-    // ... (CreateSimple, CreateDdd, RunProcess, GetRepositoryRoot, MoveAndFlattenDirectory の各メソッドは変更なし) ...
     public void CreateSimple()
     {
         var projectName = $"{_name}.Lambda";
         var testProjectName = $"{projectName}.Tests";
 
-        Console.WriteLine($"-> Generating template for '{projectName}'...");
+        Console.WriteLine($"-> Generating base structure for '{projectName}'...");
         RunProcess("dotnet", $"new lambda.EmptyFunction -n {projectName} -o {_functionRoot}");
 
         Console.WriteLine("-> Flattening directory structure...");
-
         var nestedSrcDir = Path.Combine(_functionRoot, "src", projectName);
         var finalSrcDir = Path.Combine(_functionRoot, "src");
-        MoveAndFlattenDirectory(nestedSrcDir, finalSrcDir);
+        CopyAndFlattenDirectory(nestedSrcDir, finalSrcDir);
 
         var nestedTestDir = Path.Combine(_functionRoot, "test", testProjectName);
         var finalTestDir = Path.Combine(_functionRoot, "test");
-        MoveAndFlattenDirectory(nestedTestDir, finalTestDir);
+        CopyAndFlattenDirectory(nestedTestDir, finalTestDir);
 
         Console.WriteLine("-> Adding projects to solution...");
         var finalSrcProj = Path.Combine(finalSrcDir, $"{projectName}.csproj");
         var finalTestProj = Path.Combine(finalTestDir, $"{testProjectName}.csproj");
-        RunProcess("dotnet", $"sln \"{_slnPath}\" add \"{finalSrcProj}\"");
-        RunProcess("dotnet", $"sln \"{_slnPath}\" add \"{finalTestProj}\"");
+        RunProcess("dotnet", $"sln \"{_slnPath}\" add \"{finalSrcProj}\" \"{finalTestProj}\"");
     }
 
     public void CreateDdd()
     {
-        var appPath = Path.Combine(_functionRoot, "src", $"{_name}.Application");
-        var domainPath = Path.Combine(_functionRoot, "src", $"{_name}.Domain");
-        var infraPath = Path.Combine(_functionRoot, "src", $"{_name}.Infrastructure");
-        var appTestPath = Path.Combine(_functionRoot, "test", $"{_name}.Application.Tests");
-        var domainTestPath = Path.Combine(_functionRoot, "test", $"{_name}.Domain.Tests");
+        var appName = $"{_name}.Application";
+        var domainName = $"{_name}.Domain";
+        var infraName = $"{_name}.Infrastructure";
+        var appTestName = $"{appName}.Tests";
+        var domainTestName = $"{domainName}.Tests";
 
-        var appProj = Path.Combine(appPath, $"{_name}.Application.csproj");
-        var domainProj = Path.Combine(domainPath, $"{_name}.Domain.csproj");
-        var infraProj = Path.Combine(infraPath, $"{_name}.Infrastructure.csproj");
-        var appTestProj = Path.Combine(appTestPath, $"{_name}.Application.Tests.csproj");
-        var domainTestProj = Path.Combine(domainTestPath, $"{_name}.Domain.Tests.csproj");
+        // 1. まず、Application層を含む基本骨格を `lambda.EmptyFunction` で最終的な場所に直接生成する
+        Console.WriteLine($"-> Generating base structure with '{appName}'...");
+        RunProcess("dotnet", $"new lambda.EmptyFunction -n {appName} -o {_functionRoot}");
+        // この時点で以下のディレクトリが作成される:
+        // functions/{_name}/src/{_name}.Application/
+        // functions/{_name}/test/{_name}.Application.Tests/
 
-        Console.WriteLine("-> Generating DDD project structure...");
-        RunProcess("dotnet", $"new classlib -n {_name}.Domain -o {domainPath}");
-        RunProcess("dotnet", $"new classlib -n {_name}.Infrastructure -o {infraPath}");
-        string appTempDir = Path.Combine(Path.GetTempPath(), $"lambda-gen-{Guid.NewGuid()}");
-        RunProcess("dotnet", $"new lambda.EmptyFunction -n {_name}.Application -o {appTempDir}");
-        Directory.Move(Path.Combine(appTempDir, "src", $"{_name}.Application"), appPath);
-        Directory.Delete(appTempDir, true);
+        // 2. Domain層とInfrastructure層を、既存のsrcディレクトリ内に追加で生成する
+        Console.WriteLine("-> Generating Domain and Infrastructure layers...");
+        var domainPath = Path.Combine(_functionRoot, "src", domainName);
+        var infraPath = Path.Combine(_functionRoot, "src", infraName);
+        RunProcess("dotnet", $"new classlib -n {domainName} -o {domainPath}");
+        RunProcess("dotnet", $"new classlib -n {infraName} -o {infraPath}");
 
-        RunProcess("dotnet", $"new xunit -n {_name}.Domain.Tests -o {domainTestPath}");
-        RunProcess("dotnet", $"new xunit -n {_name}.Application.Tests -o {appTestPath}");
+        // 3. Domain層のテストプロジェクトを追加で生成する
+        Console.WriteLine("-> Generating Domain tests...");
+        var domainTestPath = Path.Combine(_functionRoot, "test", domainTestName);
+        RunProcess("dotnet", $"new xunit -n {domainTestName} -o {domainTestPath}");
+
+        // 4. パスを定義し、参照設定とソリューション追加を行う
+        var appPath = Path.Combine(_functionRoot, "src", appName);
+        var appProj = Path.Combine(appPath, $"{appName}.csproj");
+        var domainProj = Path.Combine(domainPath, $"{domainName}.csproj");
+        var infraProj = Path.Combine(infraPath, $"{infraName}.csproj");
+        var appTestProj = Path.Combine(_functionRoot, "test", appTestName, $"{appTestName}.csproj");
+        var domainTestProj = Path.Combine(domainTestPath, $"{domainTestName}.csproj");
 
         Console.WriteLine("-> Setting up project references...");
-        RunProcess("dotnet", $"add \"{appProj}\" reference \"{domainProj}\"");
-        RunProcess("dotnet", $"add \"{appProj}\" reference \"{infraProj}\"");
+        RunProcess("dotnet", $"add \"{appProj}\" reference \"{domainProj}\" \"{infraProj}\"");
         RunProcess("dotnet", $"add \"{infraProj}\" reference \"{domainProj}\"");
         RunProcess("dotnet", $"add \"{domainTestProj}\" reference \"{domainProj}\"");
         RunProcess("dotnet", $"add \"{appTestProj}\" reference \"{appProj}\"");
 
         Console.WriteLine("-> Adding all projects to solution...");
         var allProjects = new[] { appProj, domainProj, infraProj, appTestProj, domainTestProj };
-        foreach (var proj in allProjects)
-        {
-            RunProcess("dotnet", $"sln \"{_slnPath}\" add \"{proj}\"");
-        }
+        RunProcess("dotnet", $"sln \"{_slnPath}\" add {string.Join(" ", allProjects.Select(p => $"\"{p}\""))}");
     }
 
-    private void MoveAndFlattenDirectory(string sourceDir, string destinationDir)
+    private void CopyAndFlattenDirectory(string sourceDir, string destinationDir)
     {
         if (!Directory.Exists(sourceDir)) return;
-        foreach (var file in Directory.GetFiles(sourceDir))
+        Directory.CreateDirectory(destinationDir);
+        foreach (var file in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
         {
-            File.Move(file, Path.Combine(destinationDir, Path.GetFileName(file)));
-        }
-        foreach (var dir in Directory.GetDirectories(sourceDir))
-        {
-            Directory.Move(dir, Path.Combine(destinationDir, Path.GetFileName(dir)));
+            var destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, destFile, true);
         }
         Directory.Delete(sourceDir, true);
     }
@@ -167,16 +150,16 @@ public class ProjectGenerator
     {
         var process = new Process
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = command,
-                Arguments = args,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = _repoRoot
-            }
+          StartInfo = new ProcessStartInfo
+          {
+            FileName = "dotnet",
+            Arguments = args,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = _repoRoot
+          }
         };
         process.Start();
         string output = process.StandardOutput.ReadToEnd();
