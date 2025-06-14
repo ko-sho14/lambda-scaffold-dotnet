@@ -42,11 +42,11 @@ lambda-scaffold-dotnet/
 │   ├── MyComplexBatch/     # (例: DDDを適用した複雑なバッチ)
 │   └── MySimpleBatch/      # (例: シンプルな構成のバッチ)
 │
-├── terraform/              # インフラ定義 (IaC)。(例: Terraform)
-│
 ├── scripts/                # CI/CDなどで利用するヘルパースクリプト
 │
 ├── shared/                 # 複数のLambdaで共有する共通ライブラリ (Shared Kernelなど)
+│
+├── terraform/              # インフラ定義 (IaC)。(例: Terraform)
 │
 ├── tools/                  # 開発を補助する.NET ローカルツール (`dotnet new-lambda`)
 │
