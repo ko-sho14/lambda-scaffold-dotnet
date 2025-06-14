@@ -26,3 +26,93 @@ dotnet tool restore
     ```
 
 **➡️ [ツールの全オプションや詳細な使い方はこちら](./tools/LambdaTools/README.md)**
+
+## 📁 ディレクトリ構成 (Directory Structure)
+
+このリポジトリは、以下の思想に基づいたモノレポ構成を採用しています。
+
+- **機能別カプセル化**: 各Lambdaは、`functions/`配下で自己完結したコンポーネントとして管理されます。
+- **関心の分離**: アプリケーションコード (`functions/`, `shared/`)、インフラ定義 (`terraform/`)、開発ツール (`tools/`) の責務を明確に分離します。
+
+```text
+lambda-scaffold-dotnet/
+│
+├── .config/                # .NET ローカルツールの設定 (`dotnet tool restore`で利用)
+├── functions/              # ✅ 主役: 各Lambda関数を機能単位で格納する場所
+│   ├── MyComplexBatch/     # (例: DDDを適用した複雑なバッチ)
+│   └── MySimpleBatch/      # (例: シンプルな構成のバッチ)
+│
+├── terraform/              # インフラ定義 (IaC)。(例: Terraform)
+│
+├── scripts/                # CI/CDなどで利用するヘルパースクリプト
+│
+├── shared/                 # 複数のLambdaで共有する共通ライブラリ (Shared Kernelなど)
+│
+├── tools/                  # 開発を補助する.NET ローカルツール (`dotnet new-lambda`)
+│
+└── YourSolutionName.sln    # 全プロジェクトを管理するソリューションファイル
+```
+
+### 🧬 Functionの構成パターン (Function Structure Patterns)
+
+このリポジトリでは、Lambda関数が担う責務の複雑さに応じて、2つの主要なプロジェクト構成パターンを用意しています。
+`dotnet new-lambda` ツールは、これらの雛形を自動で生成することができます。
+
+#### 1. シンプルな構成 (Simple Pattern)
+
+単純なデータ変換や、ビジネスロジックがほとんどないバッチ処理に適しています。
+プロジェクトの数が最小限で、見通しが良いのが特徴です。
+
+**生成コマンド:**
+```shell
+dotnet new-lambda --name MySimpleBatch --type simple
+```
+or
+```shell
+dotnet new-lambda --name MySimpleBatch
+```
+
+
+**生成されるディレクトリ構成:**
+```Plaintext
+functions/
+└── MySimpleBatch/
+    ├── src/
+    │   ├── Function.cs
+    │   └── MySimpleBatch.Lambda.csproj
+    └── test/
+        ├── FunctionTest.cs
+        └── MySimpleBatch.Lambda.Tests.csproj
+```
+
+#### 2. DDD構成 (DDD Pattern)
+
+複雑なビジネスルールや状態管理を伴う、重要なバッチ処理に適しています。
+関心の分離が徹底されており、テスト容易性と長期的なメンテナンス性に優れています。
+
+**生成コマンド:**
+```shell
+dotnet new-lambda --name MyComplexBatch --type ddd
+```
+
+**生成されるディレクトリ構成:**
+```Plaintext
+functions/
+└── MyComplexBatch/
+    ├── src/
+    │   ├── MyComplexBatch.Application/
+    │   │   ├── Function.cs
+    │   │   └── MyComplexBatch.Application.csproj
+    │   ├── MyComplexBatch.Domain/
+    │   │   └── MyComplexBatch.Domain.csproj
+    │   └── MyComplexBatch.Infrastructure/
+    │       └── MyComplexBatch.Infrastructure.csproj
+    └── test/
+        ├── MyComplexBatch.Application.Tests/
+        │   └── MyComplexBatch.Application.Tests.csproj
+        └── MyComplexBatch.Domain.Tests/
+            └── MyComplexBatch.Domain.Tests.csproj
+```
+
+---
+新しいLambdaを追加する際は、その責務の複雑さに応じて、これらのパターンから適切なものを選択してください。
