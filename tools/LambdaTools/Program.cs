@@ -23,10 +23,15 @@ typeOption.AddValidator(result =>
 functionCommand.AddOption(nameOption);
 functionCommand.AddOption(typeOption);
 
+// 'shared' サブコマンドの定義
+var sharedCommand = new Command("shared", "Create a new shared library project.");
+sharedCommand.AddOption(nameOption);
+
 // ルートコマンドの定義とサブコマンドの登録
 var rootCommand = new RootCommand("A scaffolding tool for this repository.");
 rootCommand.Name = "forge";
 rootCommand.AddCommand(functionCommand);
+rootCommand.AddCommand(sharedCommand);
 
 functionCommand.SetHandler((name, type) =>
 {
@@ -41,6 +46,17 @@ functionCommand.SetHandler((name, type) =>
     catch (Exception ex) { HandleError(ex); }
 }, nameOption, typeOption);
 
+sharedCommand.SetHandler((name) =>
+{
+    Console.WriteLine($"🚀 Starting to forge '{name}' with shared library template...");
+    var generator = new ProjectGenerator(name);
+    try
+    {
+        generator.CreateSharedLibrary();
+        Console.WriteLine($"✅ Successfully forged shared library '{name}'.");
+    }
+    catch (Exception ex) { HandleError(ex); }
+}, nameOption);
 
 // エラーハンドリング用の共通メソッド
 void HandleError(Exception ex)
@@ -141,6 +157,28 @@ public class ProjectGenerator
         Console.WriteLine("-> Adding all projects to solution...");
         var allProjects = new[] { appProj, domainProj, infraProj, appTestProj, domainTestProj };
         RunProcess("dotnet", $"sln \"{_slnPath}\" add {string.Join(" ", allProjects.Select(p => $"\"{p}\""))}");
+    }
+
+     public void CreateSharedLibrary()
+    {
+        var sharedRoot = Path.Combine(_repoRoot, "shared", _name);
+        var projectName = _name; // 共有ライブラリはサフィックスなしで良いでしょう
+        var testProjectName = $"{projectName}.Tests";
+
+        var srcPath = Path.Combine(sharedRoot, "src");
+        var testPath = Path.Combine(sharedRoot, "test");
+        var srcProj = Path.Combine(srcPath, $"{projectName}.csproj");
+        var testProj = Path.Combine(testPath, $"{testProjectName}.csproj");
+
+        Console.WriteLine($"-> Generating shared library '{projectName}'...");
+        RunProcess("dotnet", $"new classlib -n {projectName} -o {srcPath}");
+        RunProcess("dotnet", $"new xunit -n {testProjectName} -o {testPath}");
+
+        Console.WriteLine("-> Setting up project reference...");
+        RunProcess("dotnet", $"add \"{testProj}\" reference \"{srcProj}\"");
+
+        Console.WriteLine("-> Adding projects to solution...");
+        RunProcess("dotnet", $"sln \"{_slnPath}\" add \"{srcProj}\" \"{testProj}\"");
     }
 
     private void CopyAndFlattenDirectory(string sourceDir, string destinationDir)
