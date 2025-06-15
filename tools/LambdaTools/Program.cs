@@ -6,11 +6,12 @@ var nameOption = new Option<string>(
     description: "The name of the new Lambda function (e.g., MyNewBatch).")
 { IsRequired = true };
 
+// 'function' サブコマンドの定義
+var functionCommand = new Command("function", "Create a new Lambda function project.");
 var typeOption = new Option<string>(
     aliases: new[] { "--type", "-t" },
     description: "The type of project template to generate ('simple' or 'ddd').",
     getDefaultValue: () => "simple");
-
 typeOption.AddValidator(result =>
 {
     var type = result.GetValueForOption(typeOption);
@@ -19,29 +20,37 @@ typeOption.AddValidator(result =>
         result.ErrorMessage = "Type must be either 'simple' or 'ddd'.";
     }
 });
+functionCommand.AddOption(nameOption);
+functionCommand.AddOption(typeOption);
 
-var rootCommand = new RootCommand("A tool to create and configure a new Lambda project.");
-rootCommand.AddOption(nameOption);
-rootCommand.AddOption(typeOption);
-rootCommand.SetHandler((name, type) =>
+// ルートコマンドの定義とサブコマンドの登録
+var rootCommand = new RootCommand("A scaffolding tool for this repository.");
+rootCommand.Name = "forge";
+rootCommand.AddCommand(functionCommand);
+
+functionCommand.SetHandler((name, type) =>
 {
-    Console.WriteLine($"🚀 Starting creation of '{name}' with '{type}' template...");
+    Console.WriteLine($"🚀 Starting to forge '{name}' with '{type}' function template...");
     var generator = new ProjectGenerator(name);
     try
     {
-        if (type == "simple") { generator.CreateSimple(); }
-        else if (type == "ddd") { generator.CreateDdd(); }
-        Console.WriteLine($"✅ Successfully created Lambda project '{name}'.");
+        if (type == "simple") { generator.CreateSimpleFunction(); }
+        else if (type == "ddd") { generator.CreateDddFunction(); }
+        Console.WriteLine($"✅ Successfully forged function '{name}'.");
     }
-    catch (Exception ex)
-    {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"❌ An error occurred: {ex.Message}");
-        Console.ResetColor();
-    }
+    catch (Exception ex) { HandleError(ex); }
 }, nameOption, typeOption);
-return await rootCommand.InvokeAsync(args);
 
+
+// エラーハンドリング用の共通メソッド
+void HandleError(Exception ex)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine($"❌ An error occurred: {ex.Message}");
+    Console.ResetColor();
+}
+
+return await rootCommand.InvokeAsync(args);
 
 /// <summary>
 /// プロジェクト生成のロジックをまとめたクラス
@@ -65,7 +74,7 @@ public class ProjectGenerator
         _functionRoot = Path.Combine(_repoRoot, "functions", name);
     }
 
-    public void CreateSimple()
+    public void CreateSimpleFunction()
     {
         var projectName = $"{_name}.Lambda";
         var testProjectName = $"{projectName}.Tests";
@@ -88,7 +97,7 @@ public class ProjectGenerator
         RunProcess("dotnet", $"sln \"{_slnPath}\" add \"{finalSrcProj}\" \"{finalTestProj}\"");
     }
 
-    public void CreateDdd()
+    public void CreateDddFunction()
     {
         var appName = $"{_name}.Application";
         var domainName = $"{_name}.Domain";

@@ -5,7 +5,7 @@
     "lambdatools": {
       "version": "1.0.0",
       "commands": [
-        "new-lambda"
+        "forge"
       ],
       "rollForward": false
     }

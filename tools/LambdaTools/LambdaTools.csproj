@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
 
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>new-lambda</ToolCommandName>
+    <ToolCommandName>forge</ToolCommandName>
     <PackageId>LambdaTools</PackageId>
     <Version>1.0.0</Version>
     <Description>A local tool to create a new Lambda project in this repository.</Description>
