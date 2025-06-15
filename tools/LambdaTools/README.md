@@ -1,8 +1,8 @@
-# LambdaTools (`dotnet new-lambda`) 取扱説明書
+# LambdaTools (`dotnet forge`) 取扱説明書
 
 ## 1. 概要
 
-`dotnet new-lambda` は、このリポジトリで利用するカスタム .NET ローカルツールです。
+`dotnet forge` は、このリポジトリで利用するカスタム .NET ローカルツールです。
 新しいAWS Lambda関数のプロジェクト雛形を、定義された標準ディレクトリ構成に従って自動生成します。
 
 このツールを利用することで、誰が作成しても一貫性のあるプロジェクト構造が保証され、手作業による設定ミスを防ぎ、開発の初期セットアップを迅速化します。
@@ -20,14 +20,20 @@ dotnet tool restore
 
 ### 基本コマンド
 
-`dotnet new-lambda [オプション]`
+`dotnet forge <サブコマンド> [オプション]`
 
-### オプション
+### サブコマンド
+`function`
 
-| オプション                | 説明                                                                                      | 必須 | デフォルト値 |
-| --------------------------- | ----------------------------------------------------------------------------------------- | :--: | :----------: |
-| `--name, -n <NAME>`         | 作成する新しいLambdaの機能名（例: `MyAwesomeBatch`）。                                        |  ✅  |      -       |
-| `--type, -t <TYPE>`         | 生成するプロジェクトのテンプレート種類を選択します。<br>指定可能な値: `simple`, `ddd`             |  -   |   `simple`   |
+新しいLambda関数プロジェクトを生成します。
+- オプション
+  - `--name, -n <NAME>` (必須): 生成するLambdaの機能名。
+  - `--type, -t <TYPE>` (任意): テンプレート種類 (`simple`または`ddd`)。デフォルトは`simple`
+
+`shared`
+複数のLambdaで利用する共有ライブラリプロジェクトを生成します。
+- オプション:
+  - `--name, -n <NAME>` (必須): 生成する共有ライブラリ名。
 
 ## 4. 使用例
 
@@ -38,7 +44,7 @@ dotnet tool restore
 **コマンド:**
 
 ```shell
-dotnet new-lambda --name MySimpleBatch --type simple
+dotnet forge function --name MySimpleBatch --type simple
 ```
 
 **生成される構成:**
@@ -61,7 +67,7 @@ functions/
 **コマンド:**
 
 ```shell
-dotnet new-lambda --name MyComplexBatch --type ddd
+dotnet forge function --name MyComplexBatch --type ddd
 ```
 
 **生成される構成:**
@@ -76,6 +82,21 @@ functions/
     └── test/
         ├── MyComplexBatch.Application.Tests/
         └── MyComplexBatch.Domain.Tests/
+```
+
+### 例3:共有ライブラリの作成
+    ```shell
+    dotnet forge shared --name MySharedLibrary
+    ```
+
+**生成されるディレクトリ構成:**
+```Plaintext
+shared/
+└── MySharedLibrary/
+    ├── src/
+    │   └── MySharedLibrary.csproj
+    └── test/
+        └── MySharedLibrary.Tests.csproj
 ```
 
 ## 5. トラブルシューティング

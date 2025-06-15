@@ -7,7 +7,7 @@
 dotnet tool restore
 ```
 
-### LambdaTools (`dotnet new-lambda`)
+### LambdaTools (`dotnet forge`)
 
 新しいLambda関数のプロジェクト雛形を、定義されたディレクトリ構成に従って自動生成するツールです。
 
@@ -17,12 +17,16 @@ dotnet tool restore
 
 * **シンプルな構成のLambdaを作成する場合:**
     ```shell
-    dotnet new-lambda --name MySimpleBatch --type simple
+    dotnet forge function --name MySimpleBatch --type simple
     ```
 
 * **DDD構成の複雑なLambdaを作成する場合:**
     ```shell
-    dotnet new-lambda --name MyComplexBatch --type ddd
+    dotnet forge function --name MyComplexBatch --type ddd
+    ```
+* **共有ライブラリを生成する場合:**
+    ```shell
+    dotnet forge shared --name MySharedLibrary
     ```
 
 **➡️ [ツールの全オプションや詳細な使い方はこちら](./tools/LambdaTools/README.md)**
@@ -48,7 +52,7 @@ lambda-scaffold-dotnet/
 │
 ├── terraform/              # インフラ定義 (IaC)。(例: Terraform)
 │
-├── tools/                  # 開発を補助する.NET ローカルツール (`dotnet new-lambda`)
+├── tools/                  # 開発を補助する.NET ローカルツール (`dotnet forge`)
 │
 └── YourSolutionName.sln    # 全プロジェクトを管理するソリューションファイル
 ```
@@ -56,7 +60,7 @@ lambda-scaffold-dotnet/
 ### 🧬 Functionの構成パターン (Function Structure Patterns)
 
 このリポジトリでは、Lambda関数が担う責務の複雑さに応じて、2つの主要なプロジェクト構成パターンを用意しています。
-`dotnet new-lambda` ツールは、これらの雛形を自動で生成することができます。
+`dotnet forge` ツールは、これらの雛形を自動で生成することができます。
 
 #### 1. シンプルな構成 (Simple Pattern)
 
@@ -65,11 +69,11 @@ lambda-scaffold-dotnet/
 
 **生成コマンド:**
 ```shell
-dotnet new-lambda --name MySimpleBatch --type simple
+dotnet forge function --name MySimpleBatch --type simple
 ```
 or
 ```shell
-dotnet new-lambda --name MySimpleBatch
+dotnet forge function --name MySimpleBatch
 ```
 
 
@@ -92,7 +96,7 @@ functions/
 
 **生成コマンド:**
 ```shell
-dotnet new-lambda --name MyComplexBatch --type ddd
+dotnet forge function --name MyComplexBatch --type ddd
 ```
 
 **生成されるディレクトリ構成:**
@@ -112,6 +116,21 @@ functions/
         │   └── MyComplexBatch.Application.Tests.csproj
         └── MyComplexBatch.Domain.Tests/
             └── MyComplexBatch.Domain.Tests.csproj
+```
+
+#### 3. 共有ライブラリの作成
+    ```shell
+    dotnet forge shared --name MySharedLibrary
+    ```
+
+**生成されるディレクトリ構成:**
+```Plaintext
+shared/
+└── MySharedLibrary/
+    ├── src/
+    │   └── MySharedLibrary.csproj
+    └── test/
+        └── MySharedLibrary.Tests.csproj
 ```
 
 ---
